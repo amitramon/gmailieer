@@ -11,21 +11,6 @@ class Local:
   wd      = None
   loaded  = False
 
-
-  translate_labels = {
-                      'INBOX'     : 'inbox',
-                      'SPAM'      : 'spam',
-                      'TRASH'     : 'trash',
-                      'UNREAD'    : 'unread',
-                      'STARRED'   : 'flagged',
-                      'IMPORTANT' : 'important',
-                      'SENT'      : 'sent',
-                      'DRAFT'     : 'draft',
-                      'CHAT'      : 'chat'
-                      }
-
-  labels_translate = { v: k for k, v in translate_labels.items () }
-
   ignore_labels = set ([
                         'attachment',
                         'encrypted',
@@ -72,6 +57,7 @@ class Local:
       self.account = self.json.get ('account', 'me')
       self.timeout = self.json.get ('timeout', 0)
       self.drop_non_existing_label = self.json.get ('drop_non_existing_label', False)
+      self._user_label_translation = self.json.get('user_label_translation', False)
 
     def write (self):
       self.json = {}
@@ -82,6 +68,7 @@ class Local:
       self.json['account'] = self.account
       self.json['timeout'] = self.timeout
       self.json['drop_non_existing_label'] = self.drop_non_existing_label
+      self.json['user_label_translation'] = self._user_label_translation
 
       if os.path.exists (self.state_f):
         shutil.copyfile (self.state_f, self.state_f + '.bak')
@@ -114,6 +101,18 @@ class Local:
       self.drop_non_existing_label = r
       self.write ()
 
+    @property
+    def user_label_translation(self):
+      return self._user_label_translation
+
+    @user_label_translation.setter
+    def user_label_translation(self, val):
+      self._user_label_translation = val
+    
+    def set_user_label_translation(self, val=True):
+      self._user_label_translation = val
+      self.write()
+
   def __init__ (self, g):
     self.gmailieer = g
     self.wd = os.getcwd ()
@@ -132,10 +131,12 @@ class Local:
     """
 
     if not os.path.exists (self.state_f):
-      raise Local.RepositoryException ('local repository not initialized: could not find state file')
+      raise Local.RepositoryException (
+        "local repository not initialized: could not find state file '{}'".format(self.state_f))
 
     if not os.path.exists (self.md):
-      raise Local.RepositoryException ('local repository not initialized: could not find mail dir')
+      raise Local.RepositoryException (
+        "local repository not initialized: could not find mail dir '{}'".format(self.md))
 
     self.state = Local.State (self.state_f)
 
@@ -190,11 +191,15 @@ class Local:
     self.loaded = True
 
 
-  def initialize_repository (self, replace_slash_with_dot, account):
+  def initialize_repository(self, replace_slash_with_dot,
+                            account, user_label_translation):
     """
     Sets up a local repository
     """
     print ("initializing repository in: %s.." % self.wd)
+
+
+    print("user_labels_translation is {}".format(user_label_translation))
 
     # check if there is a repository here already or if there is anything that will conflict with setting up one
     if os.path.exists (self.state_f):
@@ -206,6 +211,7 @@ class Local:
     self.state = Local.State (self.state_f)
     self.state.replace_slash_with_dot = replace_slash_with_dot
     self.state.account = account
+    self.state.user_label_translation = user_label_translation
     self.state.write ()
     os.makedirs (os.path.join (self.md, 'cur'))
     os.makedirs (os.path.join (self.md, 'new'))
@@ -377,12 +383,17 @@ class Local:
     labels = set(labels)
     labels = list(labels - self.gmailieer.remote.ignore_labels)
 
-    # translate to notmuch tags
-    labels = [self.translate_labels.get (l, l) for l in labels]
+    #------------------------------------------------------------
+    # amit: replaced
+    # # translate to notmuch tags
+    # labels = [self.translate_labels.get (l, l) for l in labels]
 
-    # this is my weirdness
-    if self.state.replace_slash_with_dot:
-      labels = [l.replace ('/', '.') for l in labels]
+    # # this is my weirdness
+    # if self.state.replace_slash_with_dot:
+    #   labels = [l.replace ('/', '.') for l in labels]
+    #------------------------------------------------------------
+    labels = self.gmailieer.label_translator.remote_labels_to_local(labels)
+    #------------------------------------------------------------
 
     if fname is None:
       # this file hopefully already exists and just needs it tags updated,
