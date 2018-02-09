@@ -144,9 +144,6 @@ class Gmailieer:
         description = 'initialize',
         help = 'initialize local e-mail repository and authorize')
 
-    parser_init.add_argument ('--replace-slash-with-dot', action = 'store_true', default = False,
-        help = 'This will replace \'/\' with \'.\' in gmail labels (make sure you realize the implications)')
-
     parser_init.add_argument ('--no-auth', action = 'store_true', default = False,
         help = 'Do not immediately authorize as well (you will need to run \'auth\' afterwards)')
 
@@ -169,11 +166,6 @@ class Gmailieer:
 
     parser_set.add_argument ('-t', '--timeout', type = float,
         default = None, help = 'Set HTTP timeout in seconds (0 means system timeout)')
-
-    parser_set.add_argument ('--replace-slash-with-dot', action = 'store_true', default = False,
-        help = 'This will replace \'/\' with \'.\' in gmail labels (make sure you realize the implications)')
-
-    parser_set.add_argument ('--no-replace-slash-with-dot', action = 'store_true', default = False)
 
     parser_set.add_argument ('--drop-non-existing-labels', action = 'store_true', default = False,
         help = 'Allow missing labels on the GMail side to be dropped (see https://github.com/gauteh/gmailieer/issues/48)')
@@ -213,8 +205,7 @@ class Gmailieer:
     
   def initialize (self, args):
     self.setup (args, False)
-    self.local.initialize_repository(args.replace_slash_with_dot,
-                                     args.account,
+    self.local.initialize_repository(args.account,
                                      args.user_label_translation)
 
     if not args.no_auth:
@@ -701,12 +692,6 @@ class Gmailieer:
     if args.timeout is not None:
       self.local.state.set_timeout (args.timeout)
 
-    if args.replace_slash_with_dot:
-      self.local.state.set_replace_slash_with_dot (args.replace_slash_with_dot)
-
-    if args.no_replace_slash_with_dot:
-      self.local.state.set_replace_slash_with_dot (not args.no_replace_slash_with_dot)
-
     if args.drop_non_existing_labels:
       self.local.state.set_drop_non_existing_label (args.drop_non_existing_labels)
 
@@ -731,7 +716,6 @@ class Gmailieer:
     print ("historyId .........: %d" % self.local.state.last_historyId)
     print ("lastmod ...........: %d" % self.local.state.lastmod)
     print ("drop non labels ...:", self.local.state.drop_non_existing_label)
-    print ("replace . with / ..:", self.local.state.replace_slash_with_dot)
     print ("Use user's label translation: {}".format(
       self.local.state.user_label_translation))
 

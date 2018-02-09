@@ -465,18 +465,7 @@ class Remote:
     labels = labels - self.ignore_labels
 
     # translate to notmuch tags
-    # amit: replaced
-    #------------------------------------------------------------
-    # labels = [self.gmailieer.local.translate_labels.get (l, l) for l in labels]
-
-    # # this is my weirdness
-    # if self.gmailieer.local.state.replace_slash_with_dot:
-    #   labels = [l.replace ('/', '.') for l in labels]
-    #------------------------------------------------------------
-    labels = self.gmailieer.label_translator.remote_labels_to_local(labels)
-    #------------------------------------------------------------
-
-    labels = set(labels)
+    labels = set(self.gmailieer.label_translator.remote_labels_to_local(labels))
 
     # current tags
     tags = set(nmsg.get_tags ())
@@ -488,18 +477,8 @@ class Remote:
     rem = list((labels - tags) - self.read_only_tags)
 
     # translate back to gmail labels
-    # amit: replaced
-    #------------------------------------------------------------
-    # add = [self.gmailieer.local.labels_translate.get (k, k) for k in add]
-    # rem = [self.gmailieer.local.labels_translate.get (k, k) for k in rem]
-
-    # if self.gmailieer.local.state.replace_slash_with_dot:
-    #   add = [a.replace ('.', '/') for a in add]
-    #   rem = [r.replace ('.', '/') for r in rem]
-    #------------------------------------------------------------
     add = self.gmailieer.label_translator.local_labels_to_remote(add)
     rem = self.gmailieer.label_translator.local_labels_to_remote(rem)
-    #------------------------------------------------------------
 
     if len(add) > 0 or len(rem) > 0:
       # check if this message has been changed remotely since last pull

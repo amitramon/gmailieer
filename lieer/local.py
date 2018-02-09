@@ -11,6 +11,10 @@ class Local:
   wd      = None
   loaded  = False
 
+  # ar: need work. 'Trash' will be rejected by Gmail in any
+  # letter-case. Need to check the labels after they are tranlated to
+  # Gmail's labels to verify the do not collide with Gmail's
+  # 'prohibited' label names.
   ignore_labels = set ([
                         'attachment',
                         'encrypted',
@@ -37,7 +41,6 @@ class Local:
     # this is the last modification id of the notmuch db when the previous push was completed.
     lastmod = 0
 
-    replace_slash_with_dot = False
     account = None
     timeout = 5
     drop_non_existing_label = False
@@ -53,7 +56,6 @@ class Local:
 
       self.last_historyId = self.json.get ('last_historyId', 0)
       self.lastmod = self.json.get ('lastmod', 0)
-      self.replace_slash_with_dot = self.json.get ('replace_slash_with_dot', False)
       self.account = self.json.get ('account', 'me')
       self.timeout = self.json.get ('timeout', 0)
       self.drop_non_existing_label = self.json.get ('drop_non_existing_label', False)
@@ -64,7 +66,6 @@ class Local:
 
       self.json['last_historyId'] = self.last_historyId
       self.json['lastmod'] = self.lastmod
-      self.json['replace_slash_with_dot'] = self.replace_slash_with_dot
       self.json['account'] = self.account
       self.json['timeout'] = self.timeout
       self.json['drop_non_existing_label'] = self.drop_non_existing_label
@@ -91,10 +92,6 @@ class Local:
 
     def set_timeout (self, t):
       self.timeout = t
-      self.write ()
-
-    def set_replace_slash_with_dot (self, r):
-      self.replace_slash_with_dot = r
       self.write ()
 
     def set_drop_non_existing_label (self, r):
@@ -191,8 +188,7 @@ class Local:
     self.loaded = True
 
 
-  def initialize_repository(self, replace_slash_with_dot,
-                            account, user_label_translation):
+  def initialize_repository(self, account, user_label_translation):
     """
     Sets up a local repository
     """
@@ -209,7 +205,6 @@ class Local:
       raise Local.RepositoryException ("'mail' exists: this repository seems to already be set up!")
 
     self.state = Local.State (self.state_f)
-    self.state.replace_slash_with_dot = replace_slash_with_dot
     self.state.account = account
     self.state.user_label_translation = user_label_translation
     self.state.write ()
@@ -382,18 +377,7 @@ class Local:
     # remove ignored labels
     labels = set(labels)
     labels = list(labels - self.gmailieer.remote.ignore_labels)
-
-    #------------------------------------------------------------
-    # amit: replaced
-    # # translate to notmuch tags
-    # labels = [self.translate_labels.get (l, l) for l in labels]
-
-    # # this is my weirdness
-    # if self.state.replace_slash_with_dot:
-    #   labels = [l.replace ('/', '.') for l in labels]
-    #------------------------------------------------------------
     labels = self.gmailieer.label_translator.remote_labels_to_local(labels)
-    #------------------------------------------------------------
 
     if fname is None:
       # this file hopefully already exists and just needs it tags updated,
